@@ -92,12 +92,28 @@ SEARCH RESULTS:
 
         report = await generate_text(prompt)
 
+        provider_summary = {}
+
+        for source in sources:
+            provider = source.get("provider", "unknown")
+            provider_summary[provider] = (
+                provider_summary.get(provider, 0) + 1
+            )
+
         result = {
             "company": company,
             "competitors": competitors,
             "report": report,
             "sources": sources,
+            "provider_summary": provider_summary,
         }
+
+#        result = {
+#            "company": company,
+#            "competitors": competitors,
+#            "report": report,
+#            "sources": sources,
+#        }
 
         (
             supabase.table("jobs")
