@@ -1,0 +1,22 @@
+
+from ddgs import DDGS
+
+
+def search_public_web(query: str, max_results: int = 5) -> list[dict]:
+    """Return a small set of public web search results."""
+    results = []
+
+    with DDGS() as search:
+        for item in search.text(query, max_results=max_results):
+            url = item.get("href") or item.get("url")
+            title = item.get("title", "")
+            body = item.get("body", "")
+
+            if url:
+                results.append({
+                    "title": title,
+                    "url": url,
+                    "snippet": body[:1200],
+                })
+
+    return results
