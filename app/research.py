@@ -16,8 +16,8 @@ def search_with_agent_reach(
 ) -> list[dict]:
     """Search public web using Agent-Reach."""
 
-    uv_path = shutil.which("uv")
-
+    uv_path = shutil.which("uv") or os.path.expanduser("~/.local/bin/uv")
+    
     if not uv_path:
         raise RuntimeError("uv was not found on PATH")
 

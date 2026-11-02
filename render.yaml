@@ -1,9 +1,10 @@
+
 services:
   - type: web
     name: ai-research-platform-api
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && curl -LsSf https://astral.sh/uv/install.sh | sh
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
@@ -11,7 +12,16 @@ services:
         value: AI Research Platform
       - key: ENVIRONMENT
         value: production
+
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: openrouter/free
+
+      - key: AGENT_REACH_ENABLED
+        value: "true"
