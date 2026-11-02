@@ -1,10 +1,13 @@
 
 from datetime import datetime, timezone
 
-#from app.database import supabase
 from app.database import get_supabase_client
 from app.llm import generate_text
 from app.research import search_public_web
+
+
+MIN_SOURCES_PER_SUBJECT = 2
+MAX_SOURCES_PER_SUBJECT = 4
 
 
 def utc_now() -> str:
@@ -16,6 +19,7 @@ async def run_competitor_research(
     competitors: list[str],
 ) -> dict:
     supabase = get_supabase_client()
+
     # Create a persistent job before doing the research.
     created = (
         supabase.table("jobs")
@@ -39,22 +43,78 @@ async def run_competitor_research(
     try:
         subjects = [company] + competitors
         sources = []
+        source_coverage = []
+        coverage_errors = []
 
+        # Search each company independently.
         for subject in subjects:
             query = f"{subject} official website products pricing"
-            try:
-                found = search_public_web(query, max_results=4)
-                for item in found:
-                    item["subject"] = subject
-                sources.extend(found)
-            except Exception:
-                # Continue if one search fails.
-                continue
 
-        if not sources:
+            try:
+                found = search_public_web(
+                    query,
+                    max_results=MAX_SOURCES_PER_SUBJECT,
+                )
+
+                # Remove duplicate URLs for this subject.
+                unique_sources = []
+                seen_urls = set()
+
+                for item in found:
+                    url = item.get("url")
+
+                    if not url:
+                        continue
+
+                    normalized_url = url.rstrip("/").lower()
+
+                    if normalized_url in seen_urls:
+                        continue
+
+                    seen_urls.add(normalized_url)
+
+                    item["subject"] = subject
+                    unique_sources.append(item)
+
+                subject_count = len(unique_sources)
+
+                source_coverage.append({
+                    "subject": subject,
+                    "source_count": subject_count,
+                    "minimum_required": MIN_SOURCES_PER_SUBJECT,
+                    "status": (
+                        "sufficient"
+                        if subject_count >= MIN_SOURCES_PER_SUBJECT
+                        else "insufficient"
+                    ),
+                })
+
+                sources.extend(unique_sources)
+
+                if subject_count < MIN_SOURCES_PER_SUBJECT:
+                    coverage_errors.append(
+                        f"{subject}: only {subject_count} relevant "
+                        f"sources found; minimum is "
+                        f"{MIN_SOURCES_PER_SUBJECT}"
+                    )
+
+            except Exception as exc:
+                source_coverage.append({
+                    "subject": subject,
+                    "source_count": 0,
+                    "minimum_required": MIN_SOURCES_PER_SUBJECT,
+                    "status": "search_failed",
+                })
+
+                coverage_errors.append(
+                    f"{subject}: search failed ({type(exc).__name__})"
+                )
+
+        # Do not generate a report with insufficient coverage.
+        if coverage_errors:
             raise RuntimeError(
-                "No public search results were returned. "
-                "Try again later or use a different search term."
+                "Insufficient competitor research coverage: "
+                + "; ".join(coverage_errors)
             )
 
         source_text = "\n\n".join(
@@ -75,6 +135,7 @@ Use only the supplied search snippets as evidence.
 Do not invent facts, prices, features, or citations.
 If information is missing or unclear, say so.
 Distinguish sourced observations from your own analysis.
+
 Include a comparison table covering:
 - Product or service
 - Target customers
@@ -106,14 +167,8 @@ SEARCH RESULTS:
             "report": report,
             "sources": sources,
             "provider_summary": provider_summary,
+            "source_coverage": source_coverage,
         }
-
-#        result = {
-#            "company": company,
-#            "competitors": competitors,
-#            "report": report,
-#            "sources": sources,
-#        }
 
         (
             supabase.table("jobs")
@@ -146,4 +201,5 @@ SEARCH RESULTS:
             .eq("id", job_id)
             .execute()
         )
+
         raise
