@@ -26,7 +26,7 @@ def search_with_agent_reach(
         "tool",
         "run",
         "--from",
-        "agent-reach",
+        "https://github.com/Panniantong/Agent-Reach/releases/latest/download/agent-reach.zip",
         "agent-reach",
         "web",
         "search",
