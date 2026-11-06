@@ -46,42 +46,109 @@ async def run_competitor_research(
         source_coverage = []
         coverage_errors = []
 
-        # Search each company independently.
+              
+        # Search each company independently using multiple search categories.
         for subject in subjects:
-            query = f"{subject} official website products pricing"
+            search_queries = [
+                {
+                    "query": f"{subject} official website products pricing",
+                    "category": "official",
+                },
+                {
+                    "query": f"{subject} software reviews independent review",
+                    "category": "reviews",
+                },
+                {
+                    "query": f"{subject} Reddit user experience discussions",
+                    "category": "community",
+                },
+            ]
 
             try:
-                found = search_public_web(
-                    query,
-                    max_results=MAX_SOURCES_PER_SUBJECT,
-                )
-
-                # Remove duplicate URLs for this subject.
-                unique_sources = []
+                candidate_sources = []
                 seen_urls = set()
 
-                for item in found:
-                    url = item.get("url")
+                # Collect results from all three search categories.
+                for search_item in search_queries:
+                    found = search_public_web(
+                        search_item["query"],
+                        max_results=MAX_SOURCES_PER_SUBJECT,
+                        subject=subject,
+                    )
 
-                    if not url:
-                        continue
+                    for item in found:
+                        url = item.get("url")
 
-                    normalized_url = url.rstrip("/").lower()
+                        if not url:
+                            continue
 
-                    if normalized_url in seen_urls:
-                        continue
+                        normalized_url = url.rstrip("/").lower()
 
-                    seen_urls.add(normalized_url)
+                        if normalized_url in seen_urls:
+                            continue
 
-                    item["subject"] = subject
-                    unique_sources.append(item)
+                        seen_urls.add(normalized_url)
+
+                        item["subject"] = subject
+                        candidate_sources.append(item)
+
+                # Group results by their detected source type.
+                source_groups = {
+                    "official": [],
+                    "review_platform": [],
+                    "community": [],
+                    "other": [],
+                }
+
+                for item in candidate_sources:
+                    source_type = item.get("source_type", "other")
+
+                    if source_type not in source_groups:
+                        source_type = "other"
+
+                    source_groups[source_type].append(item)
+
+                # Select sources in a balanced order.
+                # Available categories are preferred, but not forced.
+                unique_sources = []
+
+                category_order = [
+                    "official",
+                    "review_platform",
+                    "community",
+                    "other",
+                ]
+
+                while len(unique_sources) < MAX_SOURCES_PER_SUBJECT:
+                    added_source = False
+
+                    for category in category_order:
+                        if source_groups[category]:
+                            unique_sources.append(
+                                source_groups[category].pop(0)
+                            )
+                            added_source = True
+
+                            if len(unique_sources) >= MAX_SOURCES_PER_SUBJECT:
+                                break
+
+                    if not added_source:
+                        break
 
                 subject_count = len(unique_sources)
 
+                # Record source coverage by company.
                 source_coverage.append({
                     "subject": subject,
                     "source_count": subject_count,
                     "minimum_required": MIN_SOURCES_PER_SUBJECT,
+                    "source_type_summary": {
+                        source_type: sum(
+                            1 for item in unique_sources
+                            if item.get("source_type") == source_type
+                        )
+                        for source_type in category_order
+                    },
                     "status": (
                         "sufficient"
                         if subject_count >= MIN_SOURCES_PER_SUBJECT
@@ -109,6 +176,7 @@ async def run_competitor_research(
                 coverage_errors.append(
                     f"{subject}: search failed ({type(exc).__name__})"
                 )
+
 
         # Do not generate a report with insufficient coverage.
         if coverage_errors:
