@@ -126,26 +126,122 @@ async def run_competitor_research(
         )
 
         prompt = f"""
-Create a concise competitor research report.
+        
+You are a professional market research analyst.
 
+Prepare a structured, evidence-based competitor research report.
+
+RESEARCH SUBJECTS
 Main company or product: {company}
 Competitors: {", ".join(competitors) or "None specified"}
 
-Use only the supplied search snippets as evidence.
-Do not invent facts, prices, features, or citations.
-If information is missing or unclear, say so.
-Distinguish sourced observations from your own analysis.
+EVIDENCE RULES
+1. Use only the supplied search results as factual evidence.
+2. Do not invent company information, product features, prices,
+   customer segments, market share, or business performance.
+3. Do not create fake citations or URLs.
+4. Attach source URLs to relevant factual claims.
+5. If information is unavailable, write "Not found in supplied sources".
+6. Clearly distinguish verified observations from analysis or inference.
+7. Never interpret missing information as proof that a feature
+   is unavailable.
 
-Include a comparison table covering:
-- Product or service
-- Target customers
-- Main features
-- Pricing (only if supported by evidence)
-- Strengths
-- Potential weaknesses or unknowns
+8. In comparison tables, use these labels:
+   - Yes: explicitly confirmed by supplied evidence.
+   - No: explicitly stated as unavailable by a supplied source.
+   - Partial: only some aspects are supported.
+   - Not found in supplied sources: insufficient evidence.
 
-Finish with key findings and recommended next research steps.
-Include relevant source URLs next to the claims they support.
+9. Do not use "No" simply because a feature was not mentioned.
+
+10. Distinguish free AI trials, included AI features, and paid AI
+    add-ons. Do not describe them as equivalent.
+
+11. Do not describe a product as "less suited", "weaker",
+    "limited", or "lacking" unless the supplied evidence
+    supports that conclusion.
+
+12. Separate factual limitations from analytical observations.
+    Label analytical observations as "Analysis" and explain
+    which confirmed features support the conclusion.
+
+13. Do not infer that a feature is unavailable merely because
+    it is absent from a product's pricing page or search snippets.
+
+14. When evidence is insufficient, use "Not found in supplied
+    sources" instead of making a negative comparison.
+
+REPORT STRUCTURE
+
+## 1. Executive Summary
+- Brief overview of the competitive landscape.
+- Main differences between the companies.
+- Most important findings.
+- Important information gaps.
+
+## 2. Company Overview
+For each company, describe:
+- Main products or services.
+- Target customers, if supported by evidence.
+- Business positioning.
+- Key product characteristics.
+
+## 3. Feature Comparison
+Create a comparison table with these columns:
+- Feature or capability
+- {company}
+- Each competitor
+- Evidence / source URL
+
+Only include features supported by the supplied sources.
+Use "Not found in supplied sources" where information is unavailable.
+
+## 4. Pricing Comparison
+For each company, identify:
+- Available pricing plans.
+- Published prices and billing periods.
+- Free plan or trial availability, if supported.
+
+Do not estimate or assume prices.
+If pricing information is unavailable, state that clearly.
+
+## 5. Competitive Advantages and Limitations
+For each company:
+- Evidence-supported strengths.
+- Potential weaknesses or limitations.
+- Areas where information is insufficient.
+
+Label analytical conclusions as "Analysis" rather than verified facts.
+
+## 6. Strategic Opportunities for {company}
+Identify:
+- Potential areas for differentiation.
+- Competitor capabilities worth studying.
+- Possible product or service improvements.
+- Questions that require further research.
+
+Do not present recommendations as established facts.
+
+## 7. Key Findings
+Summarize the five most important findings.
+Prioritize findings that are supported by multiple sources.
+
+## 8. Research Confidence and Limitations
+Explain:
+- Which companies have sufficient source coverage.
+- Which findings have direct supporting evidence.
+- Which areas rely on limited information.
+- What additional research would improve confidence.
+
+## 9. Sources
+List the supplied source URLs grouped by company.
+
+QUALITY REQUIREMENTS
+- Use clear, professional business language.
+- Avoid generic marketing statements.
+- Avoid repeating the same information in multiple sections.
+- Make comparisons specific and useful for business decisions.
+- Never fabricate evidence.
 
 SEARCH RESULTS:
 {source_text}

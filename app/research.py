@@ -1,4 +1,5 @@
 
+import re
 import json
 import logging
 import os
@@ -8,6 +9,37 @@ import subprocess
 from ddgs import DDGS
 
 logger = logging.getLogger(__name__)
+
+def is_relevant_result(
+    query: str,
+    title: str,
+    url: str,
+    snippet: str,
+) -> bool:
+    """Reject search results that do not mention the main search subject."""
+
+    stop_words = {
+        "the", "and", "for", "with", "from", "official",
+        "website", "products", "product", "pricing", "price",
+        "best", "latest", "review", "reviews", "about",
+        "company", "information", "services",
+    }
+
+    query_words = re.findall(r"[a-z0-9]+", query.lower())
+
+    # Use the first two meaningful words as subject identifiers.
+    subject_words = [
+        word for word in query_words
+        if word not in stop_words and len(word) > 1
+    ][:2]
+
+    if not subject_words:
+        return True
+
+    result_text = f"{title} {url} {snippet}".lower()
+    result_words = set(re.findall(r"[a-z0-9]+", result_text))
+
+    return all(word in result_words for word in subject_words)
 
 
 def search_with_agent_reach(
@@ -68,6 +100,13 @@ def search_with_agent_reach(
 
         if not url:
             continue
+        if not is_relevant_result(
+            query,
+            item.get("title") or "",
+            url,
+            item.get("text") or "",
+        ):
+            continue
 
         results.append({
             "title": item.get("title") or "",
@@ -101,6 +140,13 @@ def search_with_ddgs(
             url = item.get("href") or item.get("url")
 
             if not url:
+                continue
+            if not is_relevant_result(
+                query,
+                item.get("title") or "",
+                url,
+                item.get("body") or "",
+            ):
                 continue
 
             results.append({
