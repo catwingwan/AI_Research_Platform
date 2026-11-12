@@ -203,6 +203,32 @@ RESEARCH SUBJECTS
 Main company or product: {company}
 Competitors: {", ".join(competitors) or "None specified"}
 
+COMPANY ATTRIBUTION RULES
+
+A. Every supplied source has a Subject field identifying
+   the company or product it relates to.
+
+B. Use a source as direct evidence about a company only
+   when its Subject matches that company.
+
+C. Never attribute a feature, price, customer complaint,
+   product limitation, or review of one company to another.
+
+D. Do not transfer information between Notion, Asana,
+   and Trello merely because they appear in the same report.
+
+E. If a source compares multiple companies, use its
+   comparison claims only when the supplied snippet
+   explicitly supports those claims.
+
+F. If a company's information is insufficient, state
+   "Not found in supplied sources" rather than borrowing
+   evidence from another company.
+
+G. Before finalizing each company section, verify that
+   every company-specific factual claim is supported
+   by a source with the correct Subject.
+   
 EVIDENCE RULES
 1. Use only the supplied search results as factual evidence.
 2. Do not invent company information, product features, prices,
@@ -239,6 +265,62 @@ EVIDENCE RULES
 14. When evidence is insufficient, use "Not found in supplied
     sources" instead of making a negative comparison.
 
+
+15. CLASSIFY EVERY IMPORTANT FINDING by its evidence type:
+    - Official fact: explicitly confirmed by the company's
+      official website or documentation.
+    - Professional review: an assessment by an independent
+      publication or software review platform.
+    - Customer feedback: an opinion or experience reported
+      by an individual user or community.
+    - Analysis: a conclusion drawn from multiple findings.
+
+16. Never present professional reviews or individual customer
+    opinions as objectively verified product facts.
+
+17. When sources disagree, explicitly identify the conflict.
+    Present both findings, identify their respective sources,
+    and explain why the evidence may differ.
+
+18. Do not resolve conflicting opinions by choosing one source
+    without justification.
+
+19. Distinguish isolated customer complaints from recurring
+    customer sentiment. Do not describe an issue as widespread
+    unless multiple independent sources support that conclusion.
+
+20. Assign a research confidence level to each major finding:
+    - High: directly supported by multiple reliable sources,
+      preferably including an official source where applicable.
+    - Medium: supported by one reliable source or several
+      consistent secondary sources.
+    - Low: based on limited evidence, individual opinions,
+      conflicting sources, or uncertain information.
+
+21. Confidence levels are qualitative assessments, not
+    statistical measurements.
+
+22. Flag outdated information when a publication date is
+    available and relevant to the finding. Do not assume
+    information is current merely because a URL is accessible.
+
+23. Do not invent publication dates or claim that a source
+    has been recently verified when its date is unavailable.
+
+24. Separate current official pricing and feature information
+    from older third-party reviews.
+
+25. When comparing customer experience, describe the feedback
+    as reported experience rather than a universal product
+    characteristic.
+
+26. Every major recommendation must identify the supporting
+    evidence and explain any important uncertainty.
+
+27. If two sources provide contradictory information, do not
+    combine them into a single definitive conclusion.
+
+        
 REPORT STRUCTURE
 
 ## 1. Executive Summary
