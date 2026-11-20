@@ -8,6 +8,7 @@ import subprocess
 from urllib.parse import urlparse
 
 from ddgs import DDGS
+from ftfy import fix_text
 
 logger = logging.getLogger(__name__)
 
@@ -161,8 +162,8 @@ def search_with_agent_reach(
         if not url:
             continue
 
-        title = item.get("title") or ""
-        snippet = item.get("text") or ""
+        title = fix_text(item.get("title") or "")
+        snippet = fix_text(item.get("text") or "")
 
         if not is_relevant_result(subject, title, url, snippet):
             continue
@@ -197,8 +198,8 @@ def search_with_ddgs(
             if not url:
                 continue
 
-            title = item.get("title") or ""
-            snippet = item.get("body") or ""
+            title = fix_text(item.get("title") or "")
+            snippet = fix_text(item.get("body") or "")
 
             if not is_relevant_result(subject, title, url, snippet):
                 continue
