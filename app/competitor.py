@@ -1,10 +1,11 @@
-
+import logging
 from datetime import datetime, timezone
 
 from app.database import get_supabase_client
 from app.llm import generate_text
 from app.research import search_public_web
 
+logger = logging.getLogger(__name__)
 
 MIN_SOURCES_PER_SUBJECT = 2
 MAX_SOURCES_PER_SUBJECT = 4
@@ -75,6 +76,23 @@ async def run_competitor_research(
                         max_results=MAX_SOURCES_PER_SUBJECT,
                         subject=subject,
                     )
+
+                    for result in found:
+                        title = result.get("title", "")
+                        snippet = result.get("snippet", "")
+
+                        if any(marker in title + snippet for marker in ("â", "Ã", "Â", "ï¿½")):
+                            logger.warning(
+                                "MOJIBAKE DETECTED AFTER SEARCH REPAIR | subject=%s | title=%r",
+                                subject,
+                                title,
+                            )
+                        else:
+                            logger.info(
+                                "SEARCH TEXT CLEAN AFTER REPAIR | subject=%s | title=%r",
+                                subject,
+                                title,
+                            )
 
                     for item in found:
                         url = item.get("url")
