@@ -162,8 +162,8 @@ def search_with_agent_reach(
         if not url:
             continue
 
-        title = fix_text(item.get("title") or "")
-        snippet = fix_text(item.get("text") or "")
+        title = clean_source_text(item.get("title") or "")
+        snippet = clean_source_text(item.get("text") or "")
 
         if not is_relevant_result(subject, title, url, snippet):
             continue
@@ -198,8 +198,8 @@ def search_with_ddgs(
             if not url:
                 continue
 
-            title = fix_text(item.get("title") or "")
-            snippet = fix_text(item.get("body") or "")
+            title = clean_source_text(item.get("title") or "")
+            snippet = clean_source_text(item.get("body") or "")
 
             if not is_relevant_result(subject, title, url, snippet):
                 continue
@@ -279,3 +279,56 @@ def search_public_web(
             str(exc),
         )
         raise
+
+
+def clean_source_text(value: str) -> str:
+    """Clean common text encoding problems in search results."""
+
+    if not isinstance(value, str):
+        return ""
+
+    value = fix_text(value)
+
+    # Repair known malformed punctuation sequences.
+    replacements = {
+        "â€˜": "'",
+        "â€™": "'",
+        "â€œ": '"',
+        "â€�": '"',
+        "â€“": "-",
+        "â€”": "-",
+        "â€¢": "-",
+        "Â·": " - ",
+        "â·": " - ",
+        "·": " - ",
+    }
+
+    for corrupted, corrected in replacements.items():
+        value = value.replace(corrupted, corrected)
+
+    # Repair malformed separators with surrounding spaces and numeric ranges.
+    value = value.replace("â ", " - ")
+    value = re.sub(r"(?<=\d)â(?=\d)", "-", value)
+
+    # Repair known missing-space separators from search snippets.
+    known_separators = (
+        "most",
+        "all",
+        "in",
+        "tracking",
+        "management",
+        "together",
+    )
+
+    for word in known_separators:
+        value = re.sub(
+            rf"(?<=\w)â(?={word}\b)",
+            " - ",
+            value,
+            flags=re.IGNORECASE,
+        )
+
+    # Normalize repeated spaces only.
+    value = re.sub(r"[ \t]{2,}", " ", value).strip()
+
+    return value
