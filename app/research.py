@@ -291,6 +291,15 @@ def clean_source_text(value: str) -> str:
 
     # Repair known malformed punctuation sequences.
     replacements = {
+        "\u00e2\u0080\u0094": " - ",
+        "\u00e2\u0080\u0093": " - ",
+        "\u00e2\u0080\u0098": "'",
+        "\u00e2\u0080\u0099": "'",
+        "\u00e2\u0080\u009c": '"',
+        "\u00e2\u0080\u009d": '"',
+        "\u00e2\u0089\u0088": "≈",
+        "\u2014": " - ",
+        "\u2013": " - ",
         "â€˜": "'",
         "â€™": "'",
         "â€œ": '"',
