@@ -73,11 +73,21 @@ async def run_competitor_research(
 
                 # Collect results from all three search categories.
                 for search_item in search_queries:
-                    found = search_public_web(
-                        search_item["query"],
-                        max_results=MAX_SOURCES_PER_SUBJECT,
-                        subject=subject,
-                    )
+                    try:
+                        found = search_public_web(
+                            search_item["query"],
+                            max_results=MAX_SOURCES_PER_SUBJECT,
+                            subject=subject,
+                        )
+
+                    except Exception as exc:
+                        logger.exception(
+                            "Search query failed | subject=%s | category=%s | error=%s",
+                            subject,
+                            search_item["category"],
+                            str(exc),
+                        )
+                        continue
 
                     for result in found:
                         title = fix_text(result.get("title", ""))
