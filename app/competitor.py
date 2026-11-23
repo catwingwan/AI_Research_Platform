@@ -431,6 +431,7 @@ SEARCH RESULTS:
 """
 
         report = await generate_text(prompt)
+        report = fix_text(report)
 
         provider_summary = {}
 
