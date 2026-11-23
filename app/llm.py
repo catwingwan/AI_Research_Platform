@@ -48,8 +48,15 @@ async def generate_text(prompt: str) -> str:
         data = response.json()
 
     try:
-        return data["choices"][0]["message"]["content"]
+        content = data["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as exc:
         raise RuntimeError(
             "The LLM API returned an unexpected response"
         ) from exc
+
+    if not isinstance(content, str) or not content.strip():
+        raise RuntimeError(
+            "The LLM API returned empty or invalid content"
+        )
+
+    return content
