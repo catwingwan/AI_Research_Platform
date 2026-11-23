@@ -257,8 +257,25 @@ def search_public_web(
 
     logger.info("Using DDGS web search")
 
-    return search_with_ddgs(
-        query,
-        relevance_subject,
-        max_results,
-    )
+    try:
+        results = search_with_ddgs(
+            query,
+            relevance_subject,
+            max_results,
+        )
+
+        logger.info(
+            "DDGS returned %d results for query: %s",
+            len(results),
+            query,
+        )
+
+        return results
+
+    except Exception as exc:
+        logger.exception(
+            "DDGS fallback search failed for query '%s': %s",
+            query,
+            str(exc),
+        )
+        raise
