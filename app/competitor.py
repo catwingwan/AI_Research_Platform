@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime, timezone
 
+from ftfy import fix_text
+
 from app.database import get_supabase_client
 from app.llm import generate_text
 from app.research import search_public_web
@@ -78,8 +80,11 @@ async def run_competitor_research(
                     )
 
                     for result in found:
-                        title = result.get("title", "")
-                        snippet = result.get("snippet", "")
+                        title = fix_text(result.get("title", ""))
+                        snippet = fix_text(result.get("snippet", ""))
+
+                        result["title"] = title
+                        result["snippet"] = snippet
 
                         if any(marker in title + snippet for marker in ("â", "Ã", "Â", "ï¿½")):
                             logger.warning(
