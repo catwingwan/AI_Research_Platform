@@ -1,10 +1,13 @@
 
 import os
+import logging
 
 import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -48,13 +51,28 @@ async def generate_text(prompt: str) -> str:
         data = response.json()
 
     try:
-        content = data["choices"][0]["message"]["content"]
+        choice = data["choices"][0]
+        message = choice.get("message") or {}
+        content = message.get("content")
     except (KeyError, IndexError, TypeError) as exc:
+        logger.error(
+            "OpenRouter returned an unexpected response structure. "
+            "Response model: %s",
+            data.get("model", "unknown"),
+        )
         raise RuntimeError(
             "The LLM API returned an unexpected response"
         ) from exc
 
     if not isinstance(content, str) or not content.strip():
+        logger.error(
+            "OpenRouter returned empty content | model=%s | "
+            "finish_reason=%s | message_fields=%s | has_reasoning=%s",
+            data.get("model", "unknown"),
+            choice.get("finish_reason", "unknown"),
+            list(message.keys()) if isinstance(message, dict) else [],
+            bool(message.get("reasoning")) if isinstance(message, dict) else False,
+        )
         raise RuntimeError(
             "The LLM API returned empty or invalid content"
         )
