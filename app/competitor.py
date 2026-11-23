@@ -5,7 +5,7 @@ from ftfy import fix_text
 
 from app.database import get_supabase_client
 from app.llm import generate_text
-from app.research import search_public_web
+from app.research import clean_source_text, search_public_web
 
 logger = logging.getLogger(__name__)
 
@@ -90,8 +90,8 @@ async def run_competitor_research(
                         continue
 
                     for result in found:
-                        title = fix_text(result.get("title", ""))
-                        snippet = fix_text(result.get("snippet", ""))
+                        title = clean_source_text(result.get("title", ""))
+                        snippet = clean_source_text(result.get("snippet", ""))
 
                         result["title"] = title
                         result["snippet"] = snippet
