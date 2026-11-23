@@ -119,7 +119,7 @@ def search_with_agent_reach(
         "tool",
         "run",
         "--from",
-        "https://github.com/Panniantong/Agent-Reach/releases/latest/download/agent-reach.zip",
+        "https://github.com/mamaruo/Agent-Reach/archive/refs/heads/fix/exa-api-key.zip",
         "agent-reach",
         "web",
         "search",
