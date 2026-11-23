@@ -421,6 +421,12 @@ List the supplied source URLs grouped by company.
 
 QUALITY REQUIREMENTS
 - Use clear, professional business language.
+ENCODING REQUIREMENTS
+- Use standard ASCII hyphens (-) for compound words.
+- Never output the character "â" or mojibake text.
+- Use normal ASCII spaces around punctuation.
+- Do not use unusual Unicode spacing characters.
+- Preserve correct company names and product names.
 - Avoid generic marketing statements.
 - Avoid repeating the same information in multiple sections.
 - Make comparisons specific and useful for business decisions.
