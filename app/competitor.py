@@ -10,6 +10,127 @@ logger = logging.getLogger(__name__)
 MIN_SOURCES_PER_SUBJECT = 2
 MAX_SOURCES_PER_SUBJECT = 4
 
+EVIDENCE_GAP_AREAS = {
+    "pricing": [
+        "pricing", "price", "per user", "per month",
+        "per year", "billing", "subscription",
+    ],
+    "integrations": [
+        "integration", "integrations", "integrate",
+        "connected apps", "api",
+    ],
+    "mobile_support": [
+        "mobile", "ios", "android", "app store", "mobile app",
+    ],
+    "ai_capabilities": [
+        "artificial intelligence", " AI ",
+        "AI features", "AI assistant", "AI agent",
+    ],
+}
+
+
+def identify_evidence_gaps(
+    subject_sources: list[dict],
+) -> list[str]:
+    """Identify research areas with insufficient keyword coverage."""
+
+    evidence_text = " ".join(
+        (
+            source.get("title", "")
+            + " "
+            + source.get("snippet", "")
+        )
+        for source in subject_sources
+    ).lower()
+
+    gaps = []
+
+    for area, keywords in EVIDENCE_GAP_AREAS.items():
+        matched_keywords = sum(
+            1
+            for keyword in keywords
+            if keyword.lower() in evidence_text
+        )
+
+        if matched_keywords < 2:
+            gaps.append(area)
+
+    return gaps
+
+
+def recover_missing_evidence(
+    subject: str,
+    gaps: list[str],
+    existing_urls: set[str] | None = None,
+) -> list[dict]:
+    """Search specifically for missing competitor evidence."""
+
+    recovered_sources = []
+    seen_urls = {
+        url.rstrip("/").lower()
+        for url in (existing_urls or set())
+    }
+
+    search_templates = {
+        "pricing": f"{subject} official pricing plans costs",
+        "integrations": f"{subject} official integrations API",
+        "mobile_support": f"{subject} official mobile app iOS Android",
+        "ai_capabilities": f"{subject} official AI features capabilities",
+    }
+
+    for gap in gaps:
+        query = search_templates.get(gap)
+
+        if not query:
+            continue
+
+        try:
+            results = search_public_web(
+                query,
+                max_results=3,
+                subject=subject,
+            )
+
+            for item in results:
+                if len(recovered_sources) >= 2:
+                    break
+
+                url = item.get("url")
+
+                if not url:
+                    continue
+
+                normalized_url = url.rstrip("/").lower()
+
+                if normalized_url in seen_urls:
+                    continue
+
+                seen_urls.add(normalized_url)
+
+                item["title"] = clean_source_text(
+                    item.get("title", "")
+                )
+                item["snippet"] = clean_source_text(
+                    item.get("snippet", "")
+                )
+                item["subject"] = subject
+                item["recovery_topic"] = gap
+
+                recovered_sources.append(item)
+
+                if len(recovered_sources) >= 2:
+                    break
+
+        except Exception as exc:
+            logger.exception(
+                "Evidence recovery failed | subject=%s | topic=%s | error=%s",
+                subject,
+                gap,
+                str(exc),
+            )
+
+    return recovered_sources
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -208,14 +329,100 @@ async def run_competitor_research(
                     f"{subject}: search failed ({type(exc).__name__})"
                 )
 
+        # Recover evidence for missing research areas.
+        for subject in subjects:
+            subject_sources = [
+                source for source in sources
+                if source.get("subject") == subject
+            ]
 
-        # Do not generate a report with insufficient coverage.
+            gaps = identify_evidence_gaps(subject_sources)
+
+            if not gaps:
+                continue
+
+            logger.info(
+                "Evidence gaps identified | subject=%s | gaps=%s",
+                subject,
+                gaps,
+            )
+
+            recovered = recover_missing_evidence(
+                subject,
+                gaps,
+                existing_urls={
+                    source.get("url", "").rstrip("/").lower()
+                    for source in subject_sources
+                    if source.get("url")
+                },
+            )
+
+            existing_urls = {
+                source.get("url", "").rstrip("/").lower()
+                for source in subject_sources
+            }
+
+            added_count = 0
+
+            for item in recovered:
+                normalized_url = item.get("url", "").rstrip("/").lower()
+
+                if normalized_url and normalized_url not in existing_urls:
+                    sources.append(item)
+                    existing_urls.add(normalized_url)
+                    added_count += 1
+
+            logger.info(
+                "Evidence recovery completed | subject=%s | recovered=%d",
+                subject,
+                added_count,
+            )
+
+        # Refresh source coverage after recovery.
+        coverage_errors = []
+
+        for coverage in source_coverage:
+            subject = coverage["subject"]
+
+            subject_sources = [
+                source for source in sources
+                if source.get("subject") == subject
+            ]
+
+            source_count = len(subject_sources)
+
+            coverage["source_count"] = source_count
+            coverage["source_type_summary"] = {
+                source_type: sum(
+                    1 for item in subject_sources
+                    if item.get("source_type") == source_type
+                )
+                for source_type in (
+                    "official",
+                    "review_platform",
+                    "community",
+                    "other",
+                )
+            }
+
+            coverage["status"] = (
+                "sufficient"
+                if source_count >= MIN_SOURCES_PER_SUBJECT
+                else "insufficient"
+            )
+
+            if source_count < MIN_SOURCES_PER_SUBJECT:
+                coverage_errors.append(
+                    f"{subject}: {source_count} sources found "
+                    f"(minimum {MIN_SOURCES_PER_SUBJECT})"
+                )
+
+        # Generate the report only after final coverage validation.
         if coverage_errors:
             raise RuntimeError(
                 "Insufficient competitor research coverage: "
                 + "; ".join(coverage_errors)
             )
-
         source_text = "\n\n".join(
             f"Subject: {s['subject']}\n"
             f"Title: {s['title']}\n"

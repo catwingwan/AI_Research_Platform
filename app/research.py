@@ -91,11 +91,16 @@ def classify_source(
     # Only classify as official when the hostname clearly matches
     # the subject's normalized name.
     subject_slug = re.sub(r"[^a-z0-9]", "", subject.lower())
-    hostname_slug = re.sub(r"[^a-z0-9]", "", hostname.split(".")[0])
 
-    if subject_slug and (
-        subject_slug in hostname_slug
-        or hostname_slug in subject_slug
+    hostname_parts = hostname.split(".")
+    hostname_slugs = [
+        re.sub(r"[^a-z0-9]", "", part)
+        for part in hostname_parts
+    ]
+
+    if subject_slug and any(
+        subject_slug == part
+        for part in hostname_slugs
     ):
         return "official"
 
