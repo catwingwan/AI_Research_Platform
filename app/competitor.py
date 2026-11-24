@@ -1,3 +1,4 @@
+﻿import asyncio
 import logging
 from datetime import datetime, timezone
 
@@ -62,6 +63,7 @@ def recover_missing_evidence(
     subject: str,
     gaps: list[str],
     existing_urls: set[str] | None = None,
+    job_id: str | None = None,
 ) -> list[dict]:
     """Search specifically for missing competitor evidence."""
 
@@ -90,6 +92,8 @@ def recover_missing_evidence(
                 max_results=3,
                 subject=subject,
             )
+            if job_id:
+                update_job_heartbeat(job_id)
 
             for item in results:
                 if len(recovered_sources) >= 2:
@@ -135,32 +139,21 @@ def recover_missing_evidence(
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
+def update_job_heartbeat(job_id: str) -> None:
+    """Refresh the job timestamp while research is running."""
+
+    supabase = get_supabase_client()
+
+    supabase.table("jobs").update({
+        "updated_at": utc_now(),
+    }).eq("id", job_id).eq("status", "processing").execute()
 
 async def run_competitor_research(
     company: str,
     competitors: list[str],
+    job_id: str,
 ) -> dict:
     supabase = get_supabase_client()
-
-    # Create a persistent job before doing the research.
-    created = (
-        supabase.table("jobs")
-        .insert({
-            "status": "processing",
-            "request_type": "competitor_research",
-            "request_payload": {
-                "company": company,
-                "competitors": competitors,
-            },
-        })
-        .execute()
-    )
-
-    if not created.data:
-        raise RuntimeError("Could not create research job")
-
-    job = created.data[0]
-    job_id = job["id"]
 
     try:
         subjects = [company] + competitors
@@ -168,7 +161,7 @@ async def run_competitor_research(
         source_coverage = []
         coverage_errors = []
 
-              
+
         # Search each company independently using multiple search categories.
         for subject in subjects:
             search_queries = [
@@ -193,11 +186,14 @@ async def run_competitor_research(
                 # Collect results from all three search categories.
                 for search_item in search_queries:
                     try:
-                        found = search_public_web(
+                        found = await asyncio.to_thread(
+                            search_public_web,
                             search_item["query"],
                             max_results=MAX_SOURCES_PER_SUBJECT,
                             subject=subject,
                         )
+
+                        update_job_heartbeat(job_id)
 
                     except Exception as exc:
                         logger.exception(
@@ -215,7 +211,7 @@ async def run_competitor_research(
                         result["title"] = title
                         result["snippet"] = snippet
 
-                        if any(marker in title + snippet for marker in ("â", "Ã", "Â", "ï¿½")):
+                        if any(marker in title + snippet for marker in ("Ã¢", "Ãƒ", "Ã‚", "Ã¯Â¿Â½")):
                             logger.warning(
                                 "MOJIBAKE DETECTED AFTER SEARCH REPAIR | subject=%s | title=%r",
                                 subject,
@@ -347,7 +343,8 @@ async def run_competitor_research(
                 gaps,
             )
 
-            recovered = recover_missing_evidence(
+            recovered = await asyncio.to_thread(
+                recover_missing_evidence,
                 subject,
                 gaps,
                 existing_urls={
@@ -355,7 +352,10 @@ async def run_competitor_research(
                     for source in subject_sources
                     if source.get("url")
                 },
+                job_id=job_id,
             )
+
+            update_job_heartbeat(job_id)
 
             existing_urls = {
                 source.get("url", "").rstrip("/").lower()
@@ -432,7 +432,7 @@ async def run_competitor_research(
         )
 
         prompt = f"""
-        
+
 You are a professional market research analyst.
 
 Prepare a structured, evidence-based competitor research report.
@@ -466,7 +466,7 @@ F. If a company's information is insufficient, state
 G. Before finalizing each company section, verify that
    every company-specific factual claim is supported
    by a source with the correct Subject.
-   
+
 EVIDENCE RULES
 1. Use only the supplied search results as factual evidence.
 2. Do not invent company information, product features, prices,
@@ -558,7 +558,7 @@ EVIDENCE RULES
 27. If two sources provide contradictory information, do not
     combine them into a single definitive conclusion.
 
-        
+
 REPORT STRUCTURE
 
 ## 1. Executive Summary
@@ -628,7 +628,7 @@ QUALITY REQUIREMENTS
 - Use clear, professional business language.
 ENCODING REQUIREMENTS
 - Use standard ASCII hyphens (-) for compound words.
-- Never output the character "â" or mojibake text.
+- Never output the character "Ã¢" or mojibake text.
 - Use normal ASCII spaces around punctuation.
 - Do not use unusual Unicode spacing characters.
 - Preserve correct company names and product names.
