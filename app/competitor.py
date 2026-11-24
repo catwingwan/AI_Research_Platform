@@ -1,8 +1,6 @@
 import logging
 from datetime import datetime, timezone
 
-from ftfy import fix_text
-
 from app.database import get_supabase_client
 from app.llm import generate_text
 from app.research import clean_source_text, search_public_web
@@ -437,7 +435,7 @@ SEARCH RESULTS:
 """
 
         report = await generate_text(prompt)
-        report = fix_text(report)
+        report = clean_source_text(report)
 
         provider_summary = {}
 
