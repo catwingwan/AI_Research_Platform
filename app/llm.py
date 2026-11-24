@@ -27,6 +27,10 @@ async def generate_text(prompt: str) -> str:
 
     payload = {
         "model": model,
+        "max_completion_tokens": 20480,
+        "reasoning": {
+            "effort": "low",
+        },
         "messages": [
             {
                 "role": "system",
